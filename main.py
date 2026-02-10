@@ -5,51 +5,112 @@ from crewai import Crew
 from dotenv import load_dotenv
 import os
 
-# Orchestrate the workflow with explicit publishing step
-def main():
-    load_dotenv()  # Load environment variables from .env file
-
-    topic = input("Enter the topic for the article: ")
-
-    researcher = create_researcher()
-    creator = create_creator()
-    reviewer = create_reviewer()
-    publisher = PublisherAgent(
-        name="Publisher",
-        role="Publishes the reviewed article as a .md file.",
-        goal="Save the final article to a Markdown file.",
-        backstory="You are responsible for publishing articles in Markdown format."
-    )
-
-    # Define tasks
-    research = research_task(topic)
-    create_article = create_article_task()
-    review_article = review_article_task()
-
-    # Assign agents to tasks
-    research.agent = researcher
-    create_article.agent = creator
-    review_article.agent = reviewer
-
-    # Set up CrewAI workflow (excluding publisher)
-    crew = Crew(tasks=[research, create_article, review_article])
-    results = crew.kickoff()
-
-    # Publisher step: save reviewed article
-    # CrewAI's CrewOutput is a dict-like object, not a list. Get the last task's output as a string.
-    reviewed_article = None
-    if hasattr(results, 'values'):
-        last_output = list(results.values())[-1] if results else ""
-        # If the last output is a CrewOutput, get its string value
-        if hasattr(last_output, 'values'):
-            reviewed_article = str(list(last_output.values())[-1])
+def generate_article(topic, progress_callback=None):
+    """
+    Generate an article on the given topic using CrewAI agents.
+    
+    Args:
+        topic (str): The topic for the article
+        progress_callback (callable, optional): Function to call with progress updates.
+            Called with (agent_name, status) where status is 'started' or 'completed'
+    
+    Returns:
+        dict: {
+            'status': 'success' or 'error',
+            'article': article text (if successful),
+            'error': error message (if failed)
+        }
+    """
+    try:
+        load_dotenv()  # Load environment variables from .env file
+        
+        if progress_callback:
+            progress_callback("Initializing", "Preparing agents...")
+        
+        # Create agents
+        researcher = create_researcher()
+        creator = create_creator()
+        reviewer = create_reviewer()
+        
+        # Define tasks
+        research = research_task(topic)
+        create_article = create_article_task()
+        review_article = review_article_task()
+        
+        # Assign agents to tasks
+        research.agent = researcher
+        create_article.agent = creator
+        review_article.agent = reviewer
+        
+        # Set up CrewAI workflow
+        crew = Crew(tasks=[research, create_article, review_article])
+        
+        # Execute with progress tracking
+        if progress_callback:
+            progress_callback("Researcher", "Gathering information on the topic...")
+        
+        results = crew.kickoff()
+        
+        if progress_callback:
+            progress_callback("Publisher", "Finalizing article...")
+        
+        # Extract the reviewed article from results
+        reviewed_article = None
+        if hasattr(results, 'values'):
+            last_output = list(results.values())[-1] if results else ""
+            if hasattr(last_output, 'values'):
+                reviewed_article = str(list(last_output.values())[-1])
+            else:
+                reviewed_article = str(last_output)
+        elif isinstance(results, dict):
+            reviewed_article = str(list(results.values())[-1]) if results else ""
         else:
-            reviewed_article = str(last_output)
-    elif isinstance(results, dict):
-        reviewed_article = str(list(results.values())[-1]) if results else ""
+            reviewed_article = str(results or "")
+        
+        if progress_callback:
+            progress_callback("Completed", "Article generation finished!")
+        
+        return {
+            'status': 'success',
+            'article': reviewed_article,
+            'topic': topic
+        }
+        
+    except Exception as e:
+        if progress_callback:
+            progress_callback("Error", f"Failed: {str(e)}")
+        return {
+            'status': 'error',
+            'error': str(e)
+        }
+
+# CLI interface
+def main():
+    """Command-line interface for article generation"""
+    load_dotenv()
+    
+    topic = input("Enter the topic for the article: ")
+    
+    print(f"\n🚀 Starting article generation on: {topic}\n")
+    
+    def cli_progress(agent, status):
+        """Progress callback for CLI"""
+        print(f"📍 {agent}: {status}")
+    
+    result = generate_article(topic, progress_callback=cli_progress)
+    
+    if result['status'] == 'success':
+        # Save the article using publisher
+        publisher = PublisherAgent(
+            name="Publisher",
+            role="Publishes the reviewed article as a .md file.",
+            goal="Save the final article to a Markdown file.",
+            backstory="You are responsible for publishing articles in Markdown format."
+        )
+        publisher.publish(result['article'], filename="article.md")
+        print("\n✅ Article generation completed successfully!")
     else:
-        reviewed_article = str(results or "")
-    publisher.publish(reviewed_article, filename="article.md")
+        print(f"\n❌ Error: {result['error']}")
 
 if __name__ == "__main__":
     main()

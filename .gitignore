@@ -110,3 +110,8 @@ logs/
 
 # Generated articles (optional - remove if you want to track them)
 # article.md
+
+# Flask
+instance/
+.webassets-cache
+flask_session/
