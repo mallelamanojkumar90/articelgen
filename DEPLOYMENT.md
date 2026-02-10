@@ -114,8 +114,22 @@ git push origin main
 ### Service Won't Start
 
 - Verify `OPENAI_API_KEY` is set correctly
-- Check start command is `gunicorn app:app`
+- Check start command is `python -m gunicorn app:app --bind 0.0.0.0:$PORT --worker-class gevent --workers 1 --timeout 300`
 - Review application logs for errors
+
+### SSE (Server-Sent Events) Errors
+
+**"SSE error" in browser console:**
+- This means real-time progress updates aren't working
+- **Solution**: Gunicorn needs gevent workers for SSE support
+- Verify `render.yaml` uses `--worker-class gevent`
+- Ensure `gevent>=24.0.0` is in `requirements.txt`
+- Restart the service after updating
+
+**Why gevent workers?**
+- Default sync workers don't support long-lived connections
+- SSE requires async workers (gevent or eventlet)
+- Gevent is lightweight and perfect for SSE
 
 ### Slow First Request
 
