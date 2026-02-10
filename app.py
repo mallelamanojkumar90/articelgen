@@ -177,7 +177,16 @@ def get_task(task_id):
     })
 
 if __name__ == '__main__':
-    print("🚀 Starting CrewAI Article Generator Web UI")
-    print("📍 Open your browser to: http://127.0.0.1:5000")
-    print("Press Ctrl+C to stop the server\n")
-    app.run(debug=True, threaded=True)
+    import os
+    
+    # Check if running in production (Render sets PORT environment variable)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    
+    if debug:
+        print("🚀 Starting CrewAI Article Generator Web UI")
+        print(f"📍 Open your browser to: http://127.0.0.1:{port}")
+        print("Press Ctrl+C to stop the server\n")
+    
+    app.run(host='0.0.0.0', port=port, debug=debug, threaded=True)
+

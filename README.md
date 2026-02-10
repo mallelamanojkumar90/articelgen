@@ -277,6 +277,40 @@ python -m venv .venv
 app.run(debug=True, threaded=True, port=5001)
 ```
 
+## 🚀 Deployment
+
+### Deploy to Render (Recommended)
+
+This application is ready to deploy to Render with zero configuration:
+
+1. **Push to GitHub:**
+   ```bash
+   git add .
+   git commit -m "Ready for deployment"
+   git push origin main
+   ```
+
+2. **Deploy on Render:**
+   - Go to [render.com](https://render.com) and sign in
+   - Click **"New +"** → **"Blueprint"**
+   - Connect your repository
+   - Render will auto-detect `render.yaml`
+   - Add your `OPENAI_API_KEY` in environment variables
+   - Click **"Apply"** to deploy
+
+3. **Access your app:**
+   - Your app will be live at: `https://your-service-name.onrender.com`
+   - First request may take 30-60 seconds (free tier spins down)
+
+**📖 For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
+
+### Other Platforms
+
+- **Railway**: Similar to Render, supports long-running tasks
+- **Fly.io**: Good alternative with free tier
+- **Heroku**: Requires paid plan (no free tier)
+- ❌ **Vercel**: Not recommended (serverless timeout limits)
+
 ## 🤝 Contributing
 
 Contributions are welcome! Feel free to:
