@@ -98,6 +98,7 @@ def status_stream(task_id):
         
         task = tasks[task_id]
         last_progress_count = 0
+        keepalive_counter = 0
         
         while True:
             # Send new progress updates
@@ -112,6 +113,7 @@ def status_stream(task_id):
                     })
                     yield f"data: {progress_data}\n\n"
                 last_progress_count = len(task.progress)
+                keepalive_counter = 0  # Reset keepalive counter on activity
             
             # Send status update
             if task.status == 'completed':
@@ -129,9 +131,20 @@ def status_stream(task_id):
                 yield f"data: {error_data}\n\n"
                 break
             
+            # Send keepalive ping every 10 seconds (20 iterations * 0.5s)
+            keepalive_counter += 1
+            if keepalive_counter >= 20:
+                yield ": keepalive\n\n"
+                keepalive_counter = 0
+            
             time.sleep(0.5)  # Poll every 500ms
     
-    return Response(generate_events(), mimetype='text/event-stream')
+    response = Response(generate_events(), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['X-Accel-Buffering'] = 'no'
+    response.headers['Connection'] = 'keep-alive'
+    return response
+
 
 @app.route('/api/download/<task_id>')
 def download(task_id):

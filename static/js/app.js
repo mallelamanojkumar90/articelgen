@@ -34,20 +34,20 @@ const agentIcons = {
 // Form submission
 articleForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const topic = topicInput.value.trim();
     if (!topic) return;
-    
+
     // Reset UI
     hideAllSections();
     progressSection.style.display = 'block';
     logEntries.innerHTML = '';
     progressBar.style.width = '0%';
-    
+
     // Disable input
     generateBtn.disabled = true;
     topicInput.disabled = true;
-    
+
     try {
         // Start generation
         const response = await fetch('/api/generate', {
@@ -57,17 +57,17 @@ articleForm.addEventListener('submit', async (e) => {
             },
             body: JSON.stringify({ topic })
         });
-        
+
         if (!response.ok) {
             throw new Error('Failed to start generation');
         }
-        
+
         const data = await response.json();
         currentTaskId = data.task_id;
-        
+
         // Connect to SSE for progress updates
         connectToProgressStream(currentTaskId);
-        
+
     } catch (error) {
         showError(error.message);
         resetForm();
@@ -79,13 +79,17 @@ function connectToProgressStream(taskId) {
     if (eventSource) {
         eventSource.close();
     }
-    
+
     eventSource = new EventSource(`/api/status/${taskId}`);
-    
+
+    eventSource.onopen = () => {
+        console.log('SSE connection opened');
+    };
+
     eventSource.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            
+
             if (data.type === 'progress') {
                 updateProgress(data.agent, data.status, data.timestamp);
             } else if (data.type === 'completed') {
@@ -94,13 +98,24 @@ function connectToProgressStream(taskId) {
                 handleError(data.error);
             }
         } catch (error) {
-            console.error('Error parsing SSE data:', error);
+            // Ignore keepalive comments and other non-JSON messages
+            if (event.data && event.data.trim() !== '') {
+                console.error('Error parsing SSE data:', error);
+            }
         }
     };
-    
+
     eventSource.onerror = (error) => {
         console.error('SSE error:', error);
-        eventSource.close();
+
+        // Check if connection is closed
+        if (eventSource.readyState === EventSource.CLOSED) {
+            console.log('SSE connection closed');
+            eventSource.close();
+
+            // Show error to user
+            showError('Connection lost. The article generation may still be in progress. Please refresh the page to check status.');
+        }
     };
 }
 
@@ -110,7 +125,7 @@ function updateProgress(agent, status, timestamp) {
     agentIcon.textContent = agentIcons[agent] || '🤖';
     agentName.textContent = agent;
     agentStatus.textContent = status;
-    
+
     // Update progress bar
     const progressMap = {
         'Initializing': 10,
@@ -121,7 +136,7 @@ function updateProgress(agent, status, timestamp) {
         'Completed': 100
     };
     progressBar.style.width = `${progressMap[agent] || 0}%`;
-    
+
     // Add log entry
     addLogEntry(agent, status, timestamp);
 }
@@ -130,15 +145,15 @@ function updateProgress(agent, status, timestamp) {
 function addLogEntry(agent, status, timestamp) {
     const entry = document.createElement('div');
     entry.className = 'log-entry';
-    
+
     const time = new Date(timestamp).toLocaleTimeString();
-    
+
     entry.innerHTML = `
         <div><strong>${agentIcons[agent] || '🤖'} ${agent}</strong></div>
         <div>${status}</div>
         <div class="timestamp">${time}</div>
     `;
-    
+
     logEntries.appendChild(entry);
     logEntries.scrollTop = logEntries.scrollHeight;
 }
@@ -148,14 +163,14 @@ function handleCompletion(article) {
     if (eventSource) {
         eventSource.close();
     }
-    
+
     // Hide progress, show article
     progressSection.style.display = 'none';
     articleSection.style.display = 'block';
-    
+
     // Render markdown
     articlePreview.innerHTML = marked.parse(article);
-    
+
     // Reset form
     resetForm();
 }
@@ -165,7 +180,7 @@ function handleError(error) {
     if (eventSource) {
         eventSource.close();
     }
-    
+
     showError(error);
     resetForm();
 }
@@ -193,14 +208,14 @@ function resetForm() {
 // Download article
 downloadBtn.addEventListener('click', async () => {
     if (!currentTaskId) return;
-    
+
     try {
         const response = await fetch(`/api/download/${currentTaskId}`);
-        
+
         if (!response.ok) {
             throw new Error('Download failed');
         }
-        
+
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -210,7 +225,7 @@ downloadBtn.addEventListener('click', async () => {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
     } catch (error) {
         alert('Failed to download article: ' + error.message);
     }
@@ -219,17 +234,17 @@ downloadBtn.addEventListener('click', async () => {
 // Copy article to clipboard
 copyBtn.addEventListener('click', async () => {
     const articleText = articlePreview.textContent;
-    
+
     try {
         await navigator.clipboard.writeText(articleText);
-        
+
         // Visual feedback
         const originalText = copyBtn.innerHTML;
         copyBtn.innerHTML = '<span>✅</span> Copied!';
         setTimeout(() => {
             copyBtn.innerHTML = originalText;
         }, 2000);
-        
+
     } catch (error) {
         alert('Failed to copy to clipboard');
     }
