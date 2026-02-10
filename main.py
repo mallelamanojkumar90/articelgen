@@ -4,6 +4,10 @@ from tasks import research_task, create_article_task, review_article_task
 from crewai import Crew
 from dotenv import load_dotenv
 import os
+import sys
+
+# Increase recursion limit to prevent stack overflow
+sys.setrecursionlimit(5000)
 
 def generate_article(topic, progress_callback=None):
     """
@@ -55,17 +59,17 @@ def generate_article(topic, progress_callback=None):
             progress_callback("Publisher", "Finalizing article...")
         
         # Extract the reviewed article from results
-        reviewed_article = None
-        if hasattr(results, 'values'):
-            last_output = list(results.values())[-1] if results else ""
-            if hasattr(last_output, 'values'):
-                reviewed_article = str(list(last_output.values())[-1])
+        # CrewAI returns results in different formats, handle them safely
+        try:
+            if hasattr(results, 'raw'):
+                reviewed_article = str(results.raw)
+            elif isinstance(results, str):
+                reviewed_article = results
             else:
-                reviewed_article = str(last_output)
-        elif isinstance(results, dict):
-            reviewed_article = str(list(results.values())[-1]) if results else ""
-        else:
-            reviewed_article = str(results or "")
+                reviewed_article = str(results)
+        except Exception as e:
+            # Fallback to simple string conversion
+            reviewed_article = str(results) if results else "Error extracting article content"
         
         if progress_callback:
             progress_callback("Completed", "Article generation finished!")
