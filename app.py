@@ -5,7 +5,13 @@ import uuid
 import time
 import io
 import json
+import mimetypes
 from datetime import datetime
+
+# Initialize mimetypes for static files
+mimetypes.init()
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('application/javascript', '.js')
 
 app = Flask(__name__)
 
