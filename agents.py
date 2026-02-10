@@ -6,7 +6,9 @@ def create_researcher():
         name="Researcher",
         role="Researches the given topic and provides a summary.",
         goal="Find and summarize relevant information.",
-        backstory="You are an expert researcher skilled at gathering and summarizing information on any topic."
+        backstory="You are an expert researcher skilled at gathering and summarizing information on any topic.",
+        allow_delegation=False,
+        max_iter=5
     )
 
 # Creator Agent: Writes an article based on research
@@ -15,7 +17,9 @@ def create_creator():
         name="Creator",
         role="Creates an article from research notes.",
         goal="Write a clear, informative article.",
-        backstory="You are a talented writer who can turn research into engaging articles."
+        backstory="You are a talented writer who can turn research into engaging articles.",
+        allow_delegation=False,
+        max_iter=5
     )
 
 # Reviewer Agent: Reviews and edits the article
@@ -24,7 +28,9 @@ def create_reviewer():
         name="Reviewer",
         role="Reviews and edits the article for quality.",
         goal="Ensure the article is accurate and well-written.",
-        backstory="You are a meticulous editor who ensures clarity, accuracy, and quality."
+        backstory="You are a meticulous editor who ensures clarity, accuracy, and quality.",
+        allow_delegation=False,
+        max_iter=5
     )
 
 # Publisher Agent: Publishes the article as a Markdown file

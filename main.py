@@ -46,8 +46,12 @@ def generate_article(topic, progress_callback=None):
         create_article.agent = creator
         review_article.agent = reviewer
         
-        # Set up CrewAI workflow
-        crew = Crew(tasks=[research, create_article, review_article])
+        # Set up CrewAI workflow with recursion prevention
+        crew = Crew(
+            tasks=[research, create_article, review_article],
+            verbose=False,
+            max_rpm=10
+        )
         
         # Execute with progress tracking
         if progress_callback:
