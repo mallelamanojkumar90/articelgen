@@ -1,3 +1,6 @@
+from gevent import monkey
+monkey.patch_all()
+
 from flask import Flask, render_template, request, jsonify, Response, send_file
 from main import generate_article
 import threading
